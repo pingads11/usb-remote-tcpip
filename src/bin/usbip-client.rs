@@ -12,7 +12,11 @@ mod win {
     use std::path::Path;
 
     // VHCI driver device path
-    const VHCI_DEVICE_PATH: &str = "\\\\.\\usbip_vhci";
+    // usbipd-win may create the device under different names depending on version
+    const VHCI_DEVICE_PATHS: &[&str] = &[
+        "\\\\.\\USBIP-VHCI",
+        "\\\\.\\usbip_vhci",
+    ];
 
     // IOCTL codes from usbip_vhci_api.h (part of usbipd-win)
     // These are the same IOCTL codes usbipd-win uses internally.
@@ -20,12 +24,13 @@ mod win {
     const IOCTL_VHCI_UNPLUG_HARDWARE: u32 = 0x220008;
 
     pub fn open_vhci() -> io::Result<std::fs::File> {
-        let path = to_wstring(VHCI_DEVICE_PATH);
         use std::fs::OpenOptions;
-        OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open(Path::new(VHCI_DEVICE_PATH))
+        for &path in VHCI_DEVICE_PATHS {
+            if let Ok(f) = OpenOptions::new().read(true).write(true).open(Path::new(path)) {
+                return Ok(f);
+            }
+        }
+        Err(io::Error::new(io::ErrorKind::NotFound, "No VHCI device found (tried \\\\..\\USBIP-VHCI and \\\\..\\usbip_vhci). Is usbipd running?"))
     }
 
     pub fn attach_device(handle: &std::fs::File, busid: &str) -> io::Result<()> {
