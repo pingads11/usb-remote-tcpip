@@ -38,7 +38,7 @@ fn main() {
     for p in &pipe_paths {
         match fs::OpenOptions::new().read(true).write(true).open(p) {
             Ok(_) => println!("   ✅ FOUND: {}", p),
-            Err(e) => println!("   ❌ {}: {}", p),
+            Err(e) => println!("   ❌ {}: {}", p, e),
         }
     }
 
